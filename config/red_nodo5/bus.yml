@@ -1,0 +1,116 @@
+# Red del EPOS4 de este paquete: copia de eposlib/config/epos4_network con el
+# drive en el node-ID 5. Si cambia el node-ID, cámbialo aquí (node_N y
+# node_id) y vuelve a compilar: el maestro sólo arranca los nodos del DCF.
+
+# CANopen network description, consumed by dcfgen (from lely_core_libraries).
+#
+# dcfgen reads this plus each node's EDS and produces:
+#   master.dcf   what the master knows about the network, including the
+#                remote PDO mappings that make rpdo_mapped/tpdo_mapped work
+#   node_N.bin   the concise configuration the master pushes to each node at
+#                boot, which is where the PDO mapping below actually lands
+#
+# PDO mapping belongs here rather than in application code: both ends have to
+# agree on which bytes mean what, and this is the one place that writes both
+# sides from a single description. Remapping at run time over SDO would
+# configure the drive while leaving the master's own dictionary stale.
+#
+# Entries are named after their node-ID, not after any role in a machine:
+# this file describes a CAN network, not an application.
+#
+# Add a node by copying a block and changing the node-ID. The COB-ID of every
+# message is base + node-ID, so a lower node-ID wins bus arbitration: give the
+# low numbers to whatever must not be starved.
+
+master:
+  node_id: 1
+  baudrate: 1000
+
+  # Milliseconds. Every drive with heartbeat_consumer: true watches for this,
+  # and dcfgen sets each one's «Consumer heartbeat time» (0x1016) to this
+  # times options.heartbeat_multiplier (3 by default): 100 ms here, so a
+  # drive notices a dead master after 300 ms.
+  #
+  # It was 1000, which made that 3 s. The master is the process running the
+  # controller; if it crashes mid-trajectory with the drives in Cyclic
+  # Synchronous Position, 3 s is a long time for an arm to hold whatever it
+  # was last told with nobody watching. One frame every 100 ms is nothing on
+  # a 1 Mbit bus.
+  heartbeat_producer: 100
+
+  # SYNC period in microseconds. The master broadcasts this pulse and every
+  # node applies its received setpoint on it, so all axes act on the same
+  # instant instead of drifting apart by whatever their frames took to
+  # arrive. 10000 us = 100 Hz.
+  #
+  # Set to 0 to disable SYNC entirely; the profiled modes (PPM, PVM) do not
+  # need it, only the cyclic ones do.
+  #
+  # KEEP IN STEP WITH «Interpolation time period» (0x60C2:01), which the
+  # driver sets through configs::CyclicConfigs::interpolationTimePeriodMs.
+  # That object is in MILLISECONDS and this one in MICROSECONDS, so
+  # sync_period: 10000 here means interpolationTimePeriodMs = 10 there.
+  #
+  # If they disagree the drive interpolates over a window that is not the one
+  # setpoints actually arrive on: too small and the motion steps, too large
+  # and it lags the commanded trajectory. Neither fails loudly.
+  # sync_period: 5000 us = 200 Hz
+  sync_period: 5000
+
+node_5:
+  node_id: 5
+  dcf: "epos4.eds"
+  heartbeat_producer: 500
+
+  # Watch the master's heartbeat (0x1016). When it stops, the drive raises
+  # «CAN heartbeat error» (0x8130, section 7.2.35), whose reaction is set by
+  # «Abort connection option code» (0x6007, default 3: quick stop ramp, then
+  # disable) and drops to NMT pre-operational per «Error behavior» (0x1029),
+  # which stops its PDOs. Without it a drive in CSP keeps obeying the last
+  # setpoint of a master that no longer exists.
+  #
+  # Recovery needs an NMT reset communication before the fault reset (7.2.35).
+  heartbeat_consumer: true
+
+  # --- master -> drive ---
+  # transmission: 1 means "apply on every SYNC", which is what makes the
+  # cyclic modes deterministic. 255 would be event-driven, applied on arrival.
+  rpdo:
+    1:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x6040}   # Controlword          16 bit
+        - {index: 0x607A}   # Target position      32 bit
+    2:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x60FF}   # Target velocity      32 bit
+        - {index: 0x6071}   # Target torque        16 bit
+
+    # Unused, and switched off on purpose. The drive's defaults leave RPDO3
+    # and RPDO4 valid (Controlword with target position / velocity, on
+    # 0x400/0x500 + node-ID) and dcfgen only touches what is listed here, so
+    # without these lines any other device sending on those IDs would be
+    # commanding this axis. Epos4::CheckPdoMapping() reports such channels.
+    3: {enabled: false}
+    4: {enabled: false}
+
+  # --- drive -> master ---
+  tpdo:
+    1:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x6041}   # Statusword           16 bit
+        - {index: 0x6064}   # Position actual      32 bit
+    2:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x606C}   # Velocity actual      32 bit
+        - {index: 0x6077}   # Torque actual        16 bit
+    # Already disabled by the drive's defaults; stated so the network says so.
+    3: {enabled: false}
+    4: {enabled: false}

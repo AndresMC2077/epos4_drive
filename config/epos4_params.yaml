@@ -1,0 +1,26 @@
+epos4_torque_node:
+  ros__parameters:
+    # CANopen Network
+    can_interface: "can0"
+    node_id: 5
+    master_node_id: 1
+    dcf_path: ""  # Leave empty to use installed default master.dcf
+
+    # Loop frequency (Hz) - matched with 5000 us (200 Hz) SYNC in bus.yml
+    loop_hz: 200.0
+
+    # Motor & Feedback Mechanism
+    encoder_cpr: 500       # Pulses per rev (quadcounts = 4 * CPR = 2000)
+    gear_ratio: 1.0        # Output turns per motor turn (e.g. 1.0/100.0 if geared)
+    initial_angle: 180.0   # Initial angle in degrees at power-on (default 180.0 deg)
+    sign: 1.0              # Direction sign (+1.0 or -1.0) for right-hand rule
+
+    # Safety limits
+    max_speed_rpm: 3000    # Velocity limit in RPM; if exceeded, torque cuts to 0
+    max_torque_nm: 0.20    # Clamping limit for torque command [-max, +max] in N*m
+    watchdog_timeout_ms: 500 # Zero torque if no command received within this time (ms)
+
+    # Topic Names (Arm Convention)
+    torque_topic: "/arm_teleop/joint3/torque_nm"
+    position_ticks_topic: "/arm_feedback/joint3_ticks"
+    position_deg_topic: "/arm_feedback/joint3_deg"
