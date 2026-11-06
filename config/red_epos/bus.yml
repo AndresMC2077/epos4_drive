@@ -1,0 +1,104 @@
+# Red CANopen de los dos EPOS4 del brazo (joint2 y joint3) en can0.
+#
+#   node_5  ->  joint2   EDS: joint2.eds
+#   node_4  ->  joint3   EDS: joint3.eds
+#
+# UN solo maestro (node_id 1) para todo el bus: es quien manda SYNC, NMT y
+# heartbeat. Dos maestros en el mismo can0 chocarian.
+#
+# Cada drive tiene su PROPIO archivo EDS y su propio bloque. Hoy son copias
+# identicas (mismo EPOS4 Module 50/15, firmware 0x0170), pero si cambia el
+# drive o el firmware de un joint, reemplaza solo su .eds y/o su bloque aqui.
+# El EDS NO se carga en tiempo de ejecucion: dcfgen lo compila dentro de
+# master.dcf al hacer colcon build. Cualquier cambio aqui => recompilar.
+
+master:
+  node_id: 1
+  baudrate: 1000
+  heartbeat_producer: 100
+  # SYNC period in microseconds: 5000 us = 200 Hz, shared by BOTH drives.
+  sync_period: 5000
+
+# =============================================================================
+# joint2 (CANopen Node ID 5)
+# =============================================================================
+node_5:
+  node_id: 5
+  dcf: "joint2.eds"
+  heartbeat_producer: 500
+  heartbeat_consumer: true
+
+  rpdo:
+    1:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x6040}   # Controlword          16 bit
+        - {index: 0x607A}   # Target position      32 bit
+    2:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x60FF}   # Target velocity      32 bit
+        - {index: 0x6071}   # Target torque        16 bit
+    3: {enabled: false}
+    4: {enabled: false}
+
+  tpdo:
+    1:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x6041}   # Statusword           16 bit
+        - {index: 0x6064}   # Position actual      32 bit
+    2:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x606C}   # Velocity actual      32 bit
+        - {index: 0x6077}   # Torque actual        16 bit
+    3: {enabled: false}
+    4: {enabled: false}
+
+# =============================================================================
+# joint3 (CANopen Node ID 4)
+# =============================================================================
+node_4:
+  node_id: 4
+  dcf: "joint3.eds"
+  heartbeat_producer: 500
+  heartbeat_consumer: true
+
+  rpdo:
+    1:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x6040}   # Controlword          16 bit
+        - {index: 0x607A}   # Target position      32 bit
+    2:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x60FF}   # Target velocity      32 bit
+        - {index: 0x6071}   # Target torque        16 bit
+    3: {enabled: false}
+    4: {enabled: false}
+
+  tpdo:
+    1:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x6041}   # Statusword           16 bit
+        - {index: 0x6064}   # Position actual      32 bit
+    2:
+      cob_id: "auto"
+      transmission: 1
+      mapping:
+        - {index: 0x606C}   # Velocity actual      32 bit
+        - {index: 0x6077}   # Torque actual        16 bit
+    3: {enabled: false}
+    4: {enabled: false}
+
+
