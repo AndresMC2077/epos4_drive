@@ -5,6 +5,7 @@ from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 
+
 def generate_launch_description():
     pkg_share = get_package_share_directory('epos4_drive')
     default_params_file = os.path.join(pkg_share, 'config', 'epos4_params.yaml')
@@ -12,7 +13,7 @@ def generate_launch_description():
     params_file_arg = DeclareLaunchArgument(
         'params_file',
         default_value=default_params_file,
-        description='Full path to the ROS2 parameters YAML file.'
+        description='Dual EPOS4 torque control.'
     )
 
     epos4_node = Node(
@@ -27,4 +28,3 @@ def generate_launch_description():
         params_file_arg,
         epos4_node
     ])
-

@@ -14,11 +14,11 @@ find_package(std_msgs REQUIRED)
 find_package(eposlib REQUIRED)
 find_package(ros2units REQUIRED)
 
-# Compiles config/red_nodo5/bus.yml + epos4.eds into master.dcf
-eposlib_generate_dcf(red_nodo5
+# Compiles config/red_epos/bus.yml + joint2.eds + joint3.eds into master.dcf
+eposlib_generate_dcf(red_epos
   DESTINATION share/${PROJECT_NAME}/config)
 
-set(DEFAULT_DCF ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/config/red_nodo5/master.dcf)
+set(DEFAULT_DCF ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/config/red_epos/master.dcf)
 
 add_executable(epos4_torque_node src/epos4_torque_node.cpp)
 target_include_directories(epos4_torque_node PRIVATE

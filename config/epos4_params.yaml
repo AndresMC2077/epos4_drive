@@ -1,26 +1,56 @@
 epos4_torque_node:
   ros__parameters:
-    # CANopen Network
+    # BUS (shared by every motor: one CANopen master on can0)
     can_interface: "can0"
-    node_id: 5
     master_node_id: 1
-    dcf_path: ""  # Leave empty to use installed default master.dcf
+    dcf_path: ""             # Empty = installed config/red_epos/master.dcf
+    loop_hz: 200.0           # Must match sync_period (5000 us) in red_epos/bus.yml
 
-    # Loop frequency (Hz) - matched with 5000 us (200 Hz) SYNC in bus.yml
-    loop_hz: 200.0
+    # Motors handled by this node. Each name needs a block below AND a node
+    # in red_epos/bus.yml with the same node_id.
+    motor_names: ["joint2", "joint3"]
 
-    # Motor & Feedback Mechanism
-    encoder_cpr: 500       # Pulses per rev (quadcounts = 4 * CPR = 2000)
-    gear_ratio: 1.0        # Output turns per motor turn (e.g. 1.0/100.0 if geared)
-    initial_angle: 180.0   # Initial angle in degrees at power-on (default 180.0 deg)
-    sign: 1.0              # Direction sign (+1.0 or -1.0) for right-hand rule
+    # joint2  (EPOS4 node 5, EDS: red_epos/joint2.eds)
+    joint2:
+      node_id: 5
+      required: true          # true: node exits if this drive fails at startup
+                               # false: this joint stays inactive, the others run
 
-    # Safety limits
-    max_speed_rpm: 3000    # Velocity limit in RPM; if exceeded, torque cuts to 0
-    max_torque_nm: 0.20    # Clamping limit for torque command [-max, +max] in N*m
-    watchdog_timeout_ms: 500 # Zero torque if no command received within this time (ms)
+      # Motor & Feedback Mechanism
+      encoder_cpr: 4096        # Pulses per rev (quadcounts = 4 * CPR = 16384)
+      gear_ratio: 0.01         # Output turns per motor turn (1.0/100.0)
+      initial_angle: 0.0       # Angle in degrees at power-on
+      sign: -1.0               # Direction sign (+1.0 or -1.0) for right-hand rule
+      c_torque: 0.00525        # Torque constant [N*m/A], from the maxon catalog
 
-    # Topic Names (Arm Convention)
-    torque_topic: "/arm_teleop/joint3/torque_nm"
-    position_ticks_topic: "/arm_feedback/joint3_ticks"
-    position_deg_topic: "/arm_feedback/joint3_deg"
+      # Safety limits
+      max_speed_rpm: 3000      # Motor RPM; if exceeded, torque cuts to 0
+      max_torque_nm: 0.20      # Clamp for torque command [-max, +max] in N*m
+      watchdog_timeout_ms: 500 # Zero torque if no command within this time
+
+      # Topics
+      torque_topic: "/arm_teleop/joint2/current"
+      position_ticks_topic: "/arm_feedback/joint2_ticks"
+      position_deg_topic: "/arm_feedback/joint2_deg"
+
+    # joint3  (EPOS4 node 4, EDS: red_epos/joint3.eds)
+    joint3:
+      node_id: 4
+      required: false
+
+      # Motor & Feedback Mechanism
+      encoder_cpr: 4096
+      gear_ratio: 0.01
+      initial_angle: 0.0
+      sign: -1.0
+      c_torque: 0.00525
+
+      # Safety limits
+      max_speed_rpm: 3000
+      max_torque_nm: 0.20
+      watchdog_timeout_ms: 500
+
+      # Topics
+      torque_topic: "/arm_teleop/joint3/current"
+      position_ticks_topic: "/arm_feedback/joint3_ticks"
+      position_deg_topic: "/arm_feedback/joint3_deg"
